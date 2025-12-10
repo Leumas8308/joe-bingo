@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bingo Card</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    #bingo {
+      display: grid;
+      grid-template-columns: repeat(4, 150px);
+      grid-template-rows: repeat(4, 150px);
+      gap: 5px;
+      margin-top: 20px;
+    }
+    .cell {
+      background: white;
+      border: 2px solid #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .cell.active {
+      background: #4CAF50;
+      color: white;
+    }
+    #controls {
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h1>4×4 Bingo</h1>
+
+<div id="controls">
+  <button onclick="newRoom()">Generate New Card</button>
+</div>
+
+<div id="bingo"></div>
+
+<script>
+  // Master word list (customize this!)
+  const words = [
+    "Alpha", "Bravo", "Charlie", "Delta",
+    "Echo", "Foxtrot", "Golf", "Hotel",
+    "India", "Juliet", "Kilo", "Lima",
+    "Mike", "November", "Oscar", "Papa",
+    "Quebec", "Romeo", "Sierra", "Tango"
+  ];
+
+  // Simple seeded random generator
+  function seededRandom(seed) {
+    let x = 0;
+    for (let i = 0; i < seed.length; i++) {
+      x += seed.charCodeAt(i);
+    }
+    return function() {
+      x = (x * 1664525 + 1013904223) % 4294967296;
+      return x / 4294967296;
+    };
+  }
+
+  function shuffleSeeded(arr, seed) {
+    let random = seededRandom(seed);
+    let copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function getRoom() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("room") || "";
+  }
+
+  function generateBingo(room) {
+    const container = document.getElementById("bingo");
+    container.innerHTML = "";
+
+    // Seed the shuffle using the room code
+    const shuffled = shuffleSeeded(words, room).slice(0, 16);
+
+    shuffled.forEach((word, index) => {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.textContent = word;
+
+      const cellKey = `${room}_${index}`;
+
+      // Load saved state
+      const savedState = localStorage.getItem(cellKey);
+      if (savedState === "active") {
+        cell.classList.add("active");
+      }
+
+      // Handle clicks + saving
+      cell.onclick = () => {
+        cell.classList.toggle("active");
+        if (cell.classList.contains("active")) {
+          localStorage.setItem(cellKey, "active");
+        } else {
+          localStorage.removeItem(cellKey);
+        }
+      };
+
+      container.appendChild(cell);
+    });
+  }
+
+  function newRoom() {
+    // Generate random room code
+    const newSeed = Math.random().toString(36).substring(2, 8);
+    const url = `${window.location.pathname}?room=${newSeed}`;
+    window.location = url;
+  }
+
+  // Start
+  const room = getRoom();
+  if (!room) {
+    // Create a default room if URL has none
+    newRoom();
+  } else {
+    generateBingo(room);
+  }
+</script>
+
+
+</body>
+</html>
